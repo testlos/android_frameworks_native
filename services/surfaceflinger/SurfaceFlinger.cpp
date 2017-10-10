@@ -506,6 +506,7 @@ void SurfaceFlinger::init() {
     mHwc = new HWComposer(this);
     mHwc->setEventHandler(static_cast<HWComposer::EventHandler*>(this));
 
+    uint32_t builtInDisplayNum = DisplayDevice::NUM_BUILTIN_DISPLAY_TYPES;
     Mutex::Autolock _l(mStateLock);
 
     // retrieve the EGL context that was selected/created
@@ -643,6 +644,20 @@ status_t SurfaceFlinger::getDisplayConfigs(const sp<IBinder>& display,
         else {
             info.w = hwConfig->getWidth();
             info.h = hwConfig->getHeight();
+            char property[PROPERTY_VALUE_MAX];
+            if ((type == DisplayDevice::DISPLAY_PRIMARY)
+                && (property_get("ro.sf.hwrotation", property, NULL) > 0)) {
+                //displayOrientation
+                switch (atoi(property)) {
+                    case 90:
+                    case 270:
+                    info.w = hwConfig.height;
+                    info.h = hwConfig.width;
+                    break;
+                    default:
+                    break;
+                }
+            }
             info.xdpi = xdpi;
             info.ydpi = ydpi;
         }
@@ -1275,7 +1290,7 @@ void SurfaceFlinger::rebuildLayerStacks() {
             Region dirtyRegion;
             Vector<sp<Layer>> layersSortedByZ;
             const sp<DisplayDevice>& displayDevice(mDisplays[dpy]);
-            const Transform& tr(displayDevice->getTransform());
+            const Transform& tr(displayDevice->getOriginalTransform());
             const Rect bounds(displayDevice->getBounds());
             if (displayDevice->isDisplayOn()) {
                 SurfaceFlinger::computeVisibleRegions(dpy, layers,
@@ -2176,7 +2191,7 @@ bool SurfaceFlinger::doComposeSurfaces(
      */
 
     ALOGV("Rendering client layers");
-    const Transform& displayTransform = displayDevice->getTransform();
+    const Transform& displayTransform = displayDevice->getOriginalTransform();
     if (hwcId >= 0) {
         // we're using h/w composer
         bool firstLayer = true;

@@ -121,7 +121,33 @@ DisplayDevice::DisplayDevice(
         config = RenderEngine::chooseEglConfig(display, format);
 #endif
     }
-    eglSurface = eglCreateWindowSurface(display, config, window, NULL);
+    
+    /*
+     *  Sprd change here:
+     *  Enable EGL NV12 config for GPU output NV12 image, for
+     *  VirtualDisplay.
+     * */
+#ifndef GPU_NOT_SUPPORT_NV12_OUTPUT
+    if (mType >= DisplayDevice::DISPLAY_VIRTUAL)
+    {
+        EGLConfig nv12Config;
+        EGLint numConfigs = 0;
+        static EGLint sDefaultConfigAttribs[] = {
+            EGL_CONFIG_ID, 43, EGL_NONE };
+        eglChooseConfig(display, sDefaultConfigAttribs, &nv12Config, 1, &numConfigs);
+        eglSurface = eglCreateWindowSurface(display, nv12Config, window, NULL);
+
+        /*
+         * Sync Framebuffer format to VirtualDisplay Surface.
+         * */
+        format = mDisplaySurface->getFBFormat();
+        native_window_set_buffers_format(window, format);
+    }
+    else
+#endif
+    {
+        eglSurface = eglCreateWindowSurface(display, config, window, NULL);
+    }
     eglQuerySurface(display, eglSurface, EGL_WIDTH,  &mDisplayWidth);
     eglQuerySurface(display, eglSurface, EGL_HEIGHT, &mDisplayHeight);
 
@@ -173,7 +199,7 @@ DisplayDevice::DisplayDevice(
     mPanelMountFlip = atoi(property);
 
     // initialize the display orientation transform.
-    setProjection(DisplayState::eOrientationDefault, mViewport, mFrame);
+    setDisplayDevice();
 
 #ifdef NUM_FRAMEBUFFER_SURFACE_BUFFERS
     surface->allocateBuffers();
@@ -371,9 +397,63 @@ EGLBoolean DisplayDevice::makeCurrent(EGLDisplay dpy, EGLContext ctx) const {
 void DisplayDevice::setViewportAndProjection() const {
     size_t w = mDisplayWidth;
     size_t h = mDisplayHeight;
+    char property[PROPERTY_VALUE_MAX];
+    if ((mType == DisplayDevice::DISPLAY_PRIMARY)
+        && (property_get("ro.sf.hwrotation", property, NULL) > 0)) {
+        //displayOrientation
+        switch (atoi(property)) {
+            case 90:
+            case 270:
+            w = mDisplayHeight;
+            h = mDisplayWidth;
+            break;
+            default:
+            break;
+        }
+    }
     Rect sourceCrop(0, 0, w, h);
     mFlinger->getRenderEngine().setViewportAndProjection(w, h, sourceCrop, h,
         false, Transform::ROT_0);
+}
+
+void DisplayDevice::setDisplayDevice()
+{
+	// initialize the display orientation transform.
+	// it's a constant that should come from the display driver.
+	int displayOrientation = DisplayState::eOrientationDefault;
+	char property[PROPERTY_VALUE_MAX];
+	if ((mType == DisplayDevice::DISPLAY_PRIMARY)
+           && (property_get("ro.sf.hwrotation", property, NULL) > 0)) {
+		//displayOrientation
+		switch (atoi(property)) {
+			case 90:
+			displayOrientation = DisplayState::eOrientation90;
+			break;
+
+			case 180:
+			displayOrientation = DisplayState::eOrientation180;
+			break;
+
+			case 270:
+			displayOrientation = DisplayState::eOrientation270;
+			break;
+		}
+	}
+
+	const int w = mDisplayWidth;
+	const int h = mDisplayHeight;
+	DisplayDevice::orientationToTransfrom(displayOrientation, w, h,
+	&mDisplayTransform);
+	if (displayOrientation & DisplayState::eOrientationSwapMask) {
+		mDisplayWidth = h;
+		mDisplayHeight = w;
+	} else {
+		mDisplayWidth = w;
+		mDisplayHeight = h;
+	}
+
+	// initialize the display orientation transform.
+	setProjection(DisplayState::eOrientationDefault, mViewport, mFrame);
 }
 
 const sp<Fence>& DisplayDevice::getClientTargetAcquireFence() const {
@@ -576,7 +656,8 @@ void DisplayDevice::setProjection(int orientation,
     // The viewport and frame are both in the logical orientation.
     // Apply the logical translation, scale to physical size, apply the
     // physical translation and finally rotate to the physical orientation.
-    mGlobalTransform = R * TP * S * TL;
+    mGlobalTransform = mDisplayTransform * R * TP * S * TL;
+    mOriginalTransform = R * TP * S * TL;
 
     const uint8_t type = mGlobalTransform.getType();
     mNeedsFiltering = (!mGlobalTransform.preserveRects() ||

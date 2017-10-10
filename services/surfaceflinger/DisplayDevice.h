@@ -131,6 +131,7 @@ public:
     uint32_t                getOrientationTransform() const;
     static uint32_t         getPrimaryDisplayOrientationTransform();
     const Transform&        getTransform() const { return mGlobalTransform; }
+    const Transform&        getOriginalTransform() const { return mOriginalTransform; }
     const Rect              getViewport() const { return mViewport; }
     const Rect              getFrame() const { return mFrame; }
     const Rect&             getScissor() const { return mScissor; }
@@ -246,6 +247,7 @@ private:
     status_t orientationToTransfrom(int orientation,
             int w, int h, Transform* tr);
 
+    void setDisplayDevice();
     uint32_t mLayerStack;
     int mOrientation;
     static uint32_t sPrimaryDisplayOrientation;
@@ -256,6 +258,8 @@ private:
     // pre-computed scissor to apply to the display
     Rect mScissor;
     Transform mGlobalTransform;
+    Transform mOriginalTransform;
+    Transform mDisplayTransform;
     bool mNeedsFiltering;
     // Current power mode
     int mPowerMode;

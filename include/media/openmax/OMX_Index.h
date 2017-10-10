@@ -194,7 +194,7 @@ typedef enum OMX_INDEXTYPE {
     OMX_IndexParamVideoSliceFMO,            /**< reference: OMX_VIDEO_PARAM_AVCSLICEFMO */
     OMX_IndexConfigVideoAVCIntraPeriod,     /**< reference: OMX_VIDEO_CONFIG_AVCINTRAPERIOD */
     OMX_IndexConfigVideoNalSize,            /**< reference: OMX_VIDEO_CONFIG_NALSIZE */
-
+    OMX_IndexConfigEncSceneMode,
     /* Image & Video common Configurations */
     OMX_IndexCommonStartUnused = 0x07000000,
     OMX_IndexParamCommonDeblocking,         /**< reference: OMX_PARAM_DEBLOCKINGTYPE */
@@ -262,6 +262,7 @@ typedef enum OMX_INDEXTYPE {
        private indexes are not guaranteed unique and therefore should
        only be sent to the appropriate component. */
 
+    OMX_IndexParamAudioImaAdpcm = 0x7FA7B09C,/**< reference: OMX_AUDIO_PARAM_IMAADPCMTYPE */
     OMX_IndexMax = 0x7FFFFFFF
 
 } OMX_INDEXTYPE;

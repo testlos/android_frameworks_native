@@ -68,6 +68,7 @@ public:
         USAGE_HW_MASK           = GRALLOC_USAGE_HW_MASK,
 
         USAGE_CURSOR            = GRALLOC_USAGE_CURSOR,
+	USAGE_HW_TILE_ALIGN     = GRALLOC_USAGE_HW_TILE_ALIGN,
     };
 
     GraphicBuffer();
