@@ -79,8 +79,16 @@ public:
 
     virtual const sp<Fence>& getClientTargetAcquireFence() const = 0;
 
+    inline int getFBFormat() const
+    {
+        return mFBFormat;
+    }
+
 protected:
-    DisplaySurface() {}
+    int mFBFormat;
+    DisplaySurface()
+    : mFBFormat(HAL_PIXEL_FORMAT_RGBA_8888)
+    {}
     virtual ~DisplaySurface() {}
 };
 

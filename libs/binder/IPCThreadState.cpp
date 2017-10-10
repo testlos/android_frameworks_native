@@ -1138,6 +1138,12 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
         mProcess->spawnPooledThread(false);
         break;
 
+    // SPRD: Sometimes, doing binder operation in destructor could reveiving BR_TRANSACTION_COMPLETE here.
+    //       We handle this command simply and avoid crash.
+    case BR_TRANSACTION_COMPLETE:
+        ALOGE("*** BAD COMMAND: BR_TRANSACTION_COMPLETE(%x) for executeCommand from Binder driver\n", cmd);
+        break;
+
     default:
         ALOGE("*** BAD COMMAND %d received from Binder driver\n", cmd);
         result = UNKNOWN_ERROR;

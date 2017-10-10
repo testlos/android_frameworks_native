@@ -134,6 +134,7 @@ public:
     uint32_t                getOrientationTransform() const;
     static uint32_t         getPrimaryDisplayOrientationTransform();
     const Transform&        getTransform() const { return mGlobalTransform; }
+    const Transform&        getOriginalTransform() const { return mOriginalTransform; }
     const Rect              getViewport() const { return mViewport; }
     const Rect              getFrame() const { return mFrame; }
     const Rect&             getScissor() const { return mScissor; }
@@ -249,6 +250,7 @@ private:
     // The identifier of the active layer stack for this display. Several displays
     // can use the same layer stack: A z-ordered group of layers (sometimes called
     // "surfaces"). Any given layer can only be on a single layer stack.
+    void setDisplayDevice();
     uint32_t mLayerStack;
 
     int mOrientation;
@@ -260,6 +262,8 @@ private:
     // pre-computed scissor to apply to the display
     Rect mScissor;
     Transform mGlobalTransform;
+    Transform mOriginalTransform;
+    Transform mDisplayTransform;
     bool mNeedsFiltering;
     // Current power mode
     int mPowerMode;

@@ -319,6 +319,12 @@ const String8& Layer::getName() const {
 status_t Layer::setBuffers( uint32_t w, uint32_t h,
                             PixelFormat format, uint32_t flags)
 {
+    uint32_t usage = getEffectiveUsage(0);
+    if (flags & ISurfaceComposerClient::eFXSurfaceHWAcc)
+    {
+        usage |= GraphicBuffer::USAGE_HW_TILE_ALIGN;
+    }
+
     uint32_t const maxSurfaceDims = min(
             mFlinger->getMaxTextureSize(), mFlinger->getMaxViewportDims());
 
@@ -337,7 +343,7 @@ status_t Layer::setBuffers( uint32_t w, uint32_t h,
 
     mSurfaceFlingerConsumer->setDefaultBufferSize(w, h);
     mSurfaceFlingerConsumer->setDefaultBufferFormat(format);
-    mSurfaceFlingerConsumer->setConsumerUsageBits(getEffectiveUsage(0));
+    mSurfaceFlingerConsumer->setConsumerUsageBits(usage);
 
     return NO_ERROR;
 }
@@ -904,7 +910,7 @@ void Layer::setPerFrameData(const sp<const DisplayDevice>& hw,
     // after HWComposer::commit() -- every frame.
     // Apply this display's projection's viewport to the visible region
     // before giving it to the HWC HAL.
-    const Transform& tr = hw->getTransform();
+    const Transform& tr = hw->getOriginalTransform();
     Region visible = tr.transform(visibleRegion.intersect(hw->getViewport()));
     layer.setVisibleRegionScreen(visible);
     layer.setSurfaceDamage(surfaceDamageRegion);
@@ -1382,7 +1388,21 @@ void Layer::computeGeometry(const sp<const DisplayDevice>& hw, Mesh& mesh,
 {
     const Layer::State& s(getDrawingState());
     const Transform hwTransform(hw->getTransform());
-    const uint32_t hw_h = hw->getHeight();
+    uint32_t hw_h = hw->getHeight();
+	char property[PROPERTY_VALUE_MAX];
+    if ((hw->getDisplayType() == DisplayDevice::DISPLAY_PRIMARY)
+        && (property_get("ro.sf.hwrotation", property, NULL) > 0)) {
+        //displayOrientation
+        switch (atoi(property)) {
+            case 90:
+            case 270:
+                hw_h = hw->getWidth();
+                break;
+            default:
+                break;
+        }
+    }
+
     Rect win = computeBounds();
 
     vec2 lt = vec2(win.left, win.top);

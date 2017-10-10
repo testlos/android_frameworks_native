@@ -60,6 +60,10 @@ else
         DisplayHardware/HWComposer_hwc1.cpp
 endif
 
+ifeq ($(strip $(TARGET_GPU_NOT_SUPPORT_NV12_OUTPUT)),true)
+    LOCAL_CFLAGS += -DGPU_NOT_SUPPORT_NV12_OUTPUT
+endif
+
 LOCAL_CFLAGS += -fvisibility=hidden -Werror=format
 
 LOCAL_STATIC_LIBRARIES := \
